@@ -1,0 +1,109 @@
+name: Daily Exam Dose Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install packages
+      run: pip install python-telegram-bot
+      
+    - name: Run Bot
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
+      run: |
+        python3 -c "
+import os
+import random
+from datetime import datetime
+from telegram import Bot
+
+# Get credentials
+TOKEN = os.environ['BOT_TOKEN']
+CHAT = os.environ['CHAT_ID']
+
+print('Starting bot...')
+print('Token:', TOKEN[:10] + '...')
+print('Chat:', CHAT)
+
+# Create bot
+bot = Bot(token=TOKEN)
+
+# Questions list
+questions = [
+    {
+        'subject': 'Physics',
+        'question': 'What is Newton\'s First Law of Motion?',
+        'options': ['A. Inertia', 'B. F=ma', 'C. Action-Reaction', 'D. Gravity'],
+        'answer': 'A'
+    },
+    {
+        'subject': 'Chemistry',
+        'question': 'What is the atomic number of Carbon?',
+        'options': ['A. 6', 'B. 12', 'C. 14', 'D. 8'],
+        'answer': 'A'
+    },
+    {
+        'subject': 'Mathematics',
+        'question': 'What is 2+2?',
+        'options': ['A. 4', 'B. 5', 'C. 3', 'D. 6'],
+        'answer': 'A'
+    },
+    {
+        'subject': 'বাংলা',
+        'question': 'বাংলা সাহিত্যের প্রথম উপন্যাস কোনটি?',
+        'options': ['ক. আলালের ঘরের দুলাল', 'খ. কপালকুণ্ডলা', 'গ. দুর্গেশনন্দিনী', 'ঘ. অনুরাধা'],
+        'answer': 'ক'
+    }
+]
+
+# Pick random question
+q = random.choice(questions)
+
+# Create message
+msg = f'''
+📚 *Daily Exam Dose*
+━━━━━━━━━━━━━━━━
+📅 তারিখ: {datetime.now().strftime("%d/%m/%Y")}
+🕐 সময়: {datetime.now().strftime("%I:%M %p")}
+🎯 প্রশ্ন নং: {random.randint(1, 50000)}
+📖 বিষয়: {q['subject']}
+🏫 শ্রেণী: {random.choice(['Class 11', 'Class 12', 'College'])}
+━━━━━━━━━━━━━━━━
+
+❓ প্রশ্ন: {q['question']}
+
+{q['options'][0]}
+{q['options'][1]}
+{q['options'][2]}
+{q['options'][3]}
+
+✅ উত্তর: {q['answer']}
+━━━━━━━━━━━━━━━━
+💡 টিপ: প্রতিদিন পড়াশোনা করুন
+⏰ পরবর্তী: ৩০ মিনিট পর
+'''
+
+# Send to Telegram
+bot.send_message(
+    chat_id=CHAT,
+    text=msg,
+    parse_mode='Markdown'
+)
+
+print('✅ Message sent successfully!')
+"
