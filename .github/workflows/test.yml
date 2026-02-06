@@ -4,43 +4,113 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  test-bot:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: 🔧 Simple Test
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 🐍 Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: 📦 Install Dependencies
+        run: |
+          pip install requests
+          
+      - name: 🔧 Debug Environment
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          echo "🧪 Starting test..."
+          echo "🔍 Environment Variables:"
+          echo "BOT_TOKEN present: $([[ -n \"$BOT_TOKEN\" ]] && echo '✅' || echo '❌')"
+          echo "CHAT_ID present: $([[ -n \"$CHAT_ID\" ]] && echo '✅' || echo '❌')"
+          echo "BOT_TOKEN length: ${#BOT_TOKEN}"
+          echo "CHAT_ID: $CHAT_ID"
           
-          # Create test message
-          cat > test.py << 'EOF'
-import os, requests, json
-BOT_TOKEN = os.environ['BOT_TOKEN']
-CHAT_ID = os.environ['CHAT_ID']
+      - name: 🧪 Test Telegram API
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          echo "🧪 Testing Telegram API..."
+          
+          # Create Python test script
+          cat > test_telegram.py << 'EOF'
+import os
+import requests
+import json
+from datetime import datetime
 
-print(f"TOKEN: {BOT_TOKEN[:10]}...")
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '')
+CHAT_ID = os.environ.get('CHAT_ID', '')
+
+print("🔍 Debug Info:")
+print(f"BOT_TOKEN first 10 chars: {BOT_TOKEN[:10] if BOT_TOKEN else 'EMPTY'}")
 print(f"CHAT_ID: {CHAT_ID}")
 
-url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+# Test 1: Check bot
+print("\n📡 Test 1: Checking bot...")
+try:
+    resp = requests.get(f"https://api.telegram.org/bot{BOT_TOKEN}/getMe", timeout=10)
+    print(f"Bot Status: {resp.status_code}")
+    print(f"Bot Response: {resp.text}")
+except Exception as e:
+    print(f"❌ Error checking bot: {e}")
+
+# Test 2: Send message
+print("\n📤 Test 2: Sending message...")
+message = f"""
+🧪 TEST MESSAGE 🧪
+
+✅ Bot Connection Test
+📅 Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+🔧 Source: GitHub Actions
+
+📤 Status: Testing...
+🎯 Channel: Daily Exam Dose
+
+If you see this, bot is working!
+"""
+
 data = {
     "chat_id": CHAT_ID,
-    "text": "🧪 TEST FROM GITHUB ACTIONS\n\n✅ If you see this, bot is working!\n🔧 Time: $(date)",
+    "text": message,
     "parse_mode": "Markdown"
 }
 
 try:
-    r = requests.post(url, json=data, timeout=10)
-    print(f"Status: {r.status_code}")
-    print(f"Response: {r.text}")
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    response = requests.post(url, json=data, timeout=10)
+    result = response.json()
     
-    if r.json().get('ok'):
-        print("🎉 SUCCESS!")
+    print(f"📊 Response Status: {response.status_code}")
+    print(f"📄 Response: {json.dumps(result, indent=2)}")
+    
+    if result.get('ok'):
+        print("✅ SUCCESS: Message sent to Telegram!")
+        print(f"📝 Message ID: {result['result']['message_id']}")
     else:
-        print("❌ FAILED!")
+        print(f"❌ FAILED: {result.get('description')}")
+        
 except Exception as e:
-    print(f"❌ ERROR: {e}")
+    print(f"❌ Error sending message: {e}")
 EOF
           
-          python test.py
+          # Run the test script
+          python test_telegram.py
+          
+      - name: ✅ Success Report
+        if: success()
+        run: |
+          echo "🎉 Test completed successfully!"
+          echo "📤 Check your Telegram channel for the test message"
+          
+      - name: ❌ Error Report
+        if: failure()
+        run: |
+          echo "⚠️ Test failed!"
+          echo "🔧 Check the logs above for details"
