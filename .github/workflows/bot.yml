@@ -1,12 +1,12 @@
-name: Telegram Bot
+name: Daily Exam Dose Bot
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */1 * * *'
+    - cron: '*/30 * * * *'
 
 jobs:
-  bot:
+  send-question:
     runs-on: ubuntu-latest
     steps:
       - name: Send Question
@@ -14,20 +14,20 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+          curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
           -d "chat_id=$CHAT_ID" \
           -d "text=📚 *Daily Exam Dose*
 
-✅ Question 1
+🎯 Question #1
 📖 Subject: Physics
 🏫 Class: 11
 
-❓ What is force?
+❓ What is Newton's First Law?
 
-A. Mass × Acceleration
-B. Mass ÷ Acceleration
-C. Mass + Acceleration
-D. Mass - Acceleration
+A. Law of Inertia
+B. F=ma
+C. Action-Reaction
+D. Law of Gravity
 
 ✅ Answer: A" \
           -d "parse_mode=Markdown"
