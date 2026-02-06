@@ -1,0 +1,104 @@
+name: 24/7 Daily Exam Dose Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: 🐍 Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: 📦 Install Dependencies
+        run: |
+          pip install requests
+          
+      - name: 🔍 Debug Info
+        run: |
+          echo "🔧 System Information:"
+          echo "Python: $(python --version)"
+          echo "Pip: $(pip --version)"
+          echo "Current Dir: $(pwd)"
+          ls -la
+          
+      - name: 🧪 Test 1: Environment Variables
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          echo "🔍 Checking Environment Variables:"
+          echo "BOT_TOKEN length: ${#BOT_TOKEN}"
+          echo "CHAT_ID: $CHAT_ID"
+          
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "❌ BOT_TOKEN is empty!"
+            exit 1
+          fi
+          
+          if [ -z "$CHAT_ID" ]; then
+            echo "❌ CHAT_ID is empty!"
+            exit 1
+          fi
+          
+          echo "✅ Environment variables are set"
+          
+      - name: 🧪 Test 2: Direct API Test
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          echo "🔍 Testing direct API call..."
+          
+          # Test bot token
+          BOT_STATUS=$(curl -s "https://api.telegram.org/bot$BOT_TOKEN/getMe")
+          echo "Bot Status: $BOT_STATUS"
+          
+          # Send test message
+          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+            -d "chat_id=$CHAT_ID" \
+            -d "text=🔄 GitHub Actions Test Message" \
+            -d "parse_mode=Markdown")
+          
+          echo "API Response: $RESPONSE"
+          
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo "✅ API Test Successful!"
+          else
+            echo "❌ API Test Failed!"
+            exit 1
+          fi
+          
+      - name: 🤖 Run Bot Script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          echo "🚀 Running main bot script..."
+          python simple_bot.py
+          
+      - name: ✅ Final Check
+        if: success()
+        run: |
+          echo "🎉 Workflow completed successfully!"
+          echo "📤 Check your Telegram channel for the message"
+          date
+          
+      - name: ❌ Error Report
+        if: failure()
+        run: |
+          echo "⚠️ Workflow failed!"
+          echo "🔧 Check the logs above for errors"
+          echo "💡 Common issues:"
+          echo "1. BOT_TOKEN incorrect"
+          echo "2. CHAT_ID incorrect"
+          echo "3. Bot not admin in channel"
+          echo "4. Network issues"
