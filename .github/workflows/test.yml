@@ -1,0 +1,46 @@
+name: Test Bot Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔧 Simple Test
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          echo "🧪 Starting test..."
+          
+          # Create test message
+          cat > test.py << 'EOF'
+import os, requests, json
+BOT_TOKEN = os.environ['BOT_TOKEN']
+CHAT_ID = os.environ['CHAT_ID']
+
+print(f"TOKEN: {BOT_TOKEN[:10]}...")
+print(f"CHAT_ID: {CHAT_ID}")
+
+url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+data = {
+    "chat_id": CHAT_ID,
+    "text": "🧪 TEST FROM GITHUB ACTIONS\n\n✅ If you see this, bot is working!\n🔧 Time: $(date)",
+    "parse_mode": "Markdown"
+}
+
+try:
+    r = requests.post(url, json=data, timeout=10)
+    print(f"Status: {r.status_code}")
+    print(f"Response: {r.text}")
+    
+    if r.json().get('ok'):
+        print("🎉 SUCCESS!")
+    else:
+        print("❌ FAILED!")
+except Exception as e:
+    print(f"❌ ERROR: {e}")
+EOF
+          
+          python test.py
